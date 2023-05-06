@@ -211,7 +211,7 @@ EndDeviceLorawanMac::DoSend (Ptr<Packet> packet)
   if (packet != m_retxParams.packet)
     {
       NS_LOG_DEBUG ("Received a new packet from application. Resetting retransmission parameters.");
-      m_currentFCnt++;
+      // m_currentFCnt++;
       NS_LOG_DEBUG ("APP packet: " << packet << ".");
 
       // Add the Lora Frame Header to the packet
