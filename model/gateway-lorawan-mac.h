@@ -37,6 +37,7 @@ public:
 
   // Implementation of the LorawanMac interface
   virtual void Send (Ptr<Packet> packet);
+  virtual void Send1 (Ptr<Packet> packet, int fCnt);
 
   // Implementation of the LorawanMac interface
   bool IsTransmitting (void);

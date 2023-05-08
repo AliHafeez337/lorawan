@@ -192,6 +192,46 @@ EndDeviceLorawanMac::Send (Ptr<Packet> packet)
 }
 
 void
+EndDeviceLorawanMac::Send1 (Ptr<Packet> packet, int fCnt)
+{
+  NS_LOG_FUNCTION (this << packet);
+  NS_LOG_INFO ("EndDeviceLorawanMac::Send1 fCnt: " << fCnt);
+
+  // If it is not possible to transmit now because of the duty cycle,
+  // or because we are receiving, schedule a tx/retx later
+
+  Time netxTxDelay = GetNextTransmissionDelay ();
+  if (netxTxDelay != Seconds (0))
+    {
+      postponeTransmission1 (netxTxDelay, packet, fCnt);
+      return;
+    }
+
+  // Pick a channel on which to transmit the packet
+  Ptr<LogicalLoraChannel> txChannel = GetChannelForTx ();
+
+  if (!(txChannel && m_retxParams.retxLeft > 0))
+    {
+      if (!txChannel)
+        {
+          m_cannotSendBecauseDutyCycle (packet);
+        }
+      else
+        {
+          NS_LOG_INFO ("Max number of transmission achieved: packet not transmitted.");
+        }
+    }
+  else
+  // the transmitting channel is available and we have not run out the maximum number of retransmissions
+    {
+      // Make sure we can transmit at the current power on this channel
+      NS_ASSERT_MSG (m_txPower <= m_channelHelper.GetTxPowerForChannel (txChannel),
+                     " The selected power is too hight to be supported by this channel.");
+      DoSend1 (packet, fCnt);
+    }
+}
+
+void
 EndDeviceLorawanMac::postponeTransmission (Time netxTxDelay, Ptr<Packet> packet)
 {
   NS_LOG_FUNCTION (this);
@@ -202,16 +242,152 @@ EndDeviceLorawanMac::postponeTransmission (Time netxTxDelay, Ptr<Packet> packet)
                << netxTxDelay.GetSeconds () << ".");
 }
 
+void
+EndDeviceLorawanMac::postponeTransmission1 (Time netxTxDelay, Ptr<Packet> packet, int fCnt)
+{
+  NS_LOG_FUNCTION (this);
+  // Delete previously scheduled transmissions if any.
+  Simulator::Cancel (m_nextTx);
+  m_nextTx = Simulator::Schedule (netxTxDelay, &EndDeviceLorawanMac::DoSend1, this, packet, fCnt);
+  NS_LOG_WARN ("Attempting to send, but the aggregate duty cycle won't allow it. Scheduling a tx at a delay "
+               << netxTxDelay.GetSeconds () << ".");
+}
+
 
 void
 EndDeviceLorawanMac::DoSend (Ptr<Packet> packet)
 {
   NS_LOG_FUNCTION (this);
+
   // Checking if this is the transmission of a new packet
   if (packet != m_retxParams.packet)
     {
       NS_LOG_DEBUG ("Received a new packet from application. Resetting retransmission parameters.");
-      // m_currentFCnt++;
+                
+      m_currentFCnt++;
+      
+      NS_LOG_DEBUG ("APP packet: " << packet << ".");
+
+      // Add the Lora Frame Header to the packet
+      LoraFrameHeader frameHdr;
+      ApplyNecessaryOptions (frameHdr);
+      packet->AddHeader (frameHdr);
+
+      NS_LOG_INFO ("Added frame header of size " << frameHdr.GetSerializedSize () <<
+                   " bytes.");
+
+      // Check that MACPayload length is below the allowed maximum
+      if (packet->GetSize () > m_maxAppPayloadForDataRate.at (m_dataRate))
+        {
+          NS_LOG_WARN ("Attempting to send a packet larger than the maximum allowed"
+                       << " size at this DataRate (DR" << unsigned(m_dataRate) <<
+                       "). Transmission canceled.");
+          return;
+        }
+
+
+      // Add the Lora Mac header to the packet
+      LorawanMacHeader macHdr;
+      ApplyNecessaryOptions (macHdr);
+      packet->AddHeader (macHdr);
+
+      // Reset MAC command list
+      m_macCommandList.clear ();
+
+      if (m_retxParams.waitingAck)
+        {
+          // Call the callback to notify about the failure
+          uint8_t txs = m_maxNumbTx - (m_retxParams.retxLeft);
+          m_requiredTxCallback (txs, false, m_retxParams.firstAttempt, m_retxParams.packet);
+          NS_LOG_DEBUG (" Received new packet from the application layer: stopping retransmission procedure. Used " <<
+                        unsigned(txs) << " transmissions out of a maximum of " << unsigned(m_maxNumbTx) << ".");
+        }
+
+      // Reset retransmission parameters
+      resetRetransmissionParameters ();
+
+      // If this is the first transmission of a confirmed packet, save parameters for the (possible) next retransmissions.
+      if (m_mType == LorawanMacHeader::CONFIRMED_DATA_UP)
+        {
+          m_retxParams.packet = packet->Copy ();
+          m_retxParams.retxLeft = m_maxNumbTx;
+          m_retxParams.waitingAck = true;
+          m_retxParams.firstAttempt = Simulator::Now ();
+          m_retxParams.retxLeft = m_retxParams.retxLeft - 1;       // decreasing the number of retransmissions
+
+          NS_LOG_DEBUG ("Message type is " << m_mType);
+          NS_LOG_DEBUG ("It is a confirmed packet. Setting retransmission parameters and decreasing the number of transmissions left.");
+
+          NS_LOG_INFO ("Added MAC header of size " << macHdr.GetSerializedSize () <<
+                       " bytes.");
+
+          // Sent a new packet
+          NS_LOG_DEBUG ("Copied packet: " << m_retxParams.packet);
+          m_sentNewPacket (m_retxParams.packet);
+
+          // static_cast<ClassAEndDeviceLorawanMac*>(this)->SendToPhy (m_retxParams.packet);
+          SendToPhy (m_retxParams.packet);
+        }
+      else
+        {
+          m_sentNewPacket (packet);
+          // static_cast<ClassAEndDeviceLorawanMac*>(this)->SendToPhy (packet);
+          SendToPhy (packet);
+        }
+
+    }
+  // this is a retransmission
+  else
+    {
+      if (m_retxParams.waitingAck)
+        {
+
+          // Remove the headers
+          LorawanMacHeader macHdr;
+          LoraFrameHeader frameHdr;
+          packet->RemoveHeader(macHdr);
+          packet->RemoveHeader(frameHdr);
+
+          // Add the Lora Frame Header to the packet
+          frameHdr = LoraFrameHeader ();
+          ApplyNecessaryOptions (frameHdr);
+          packet->AddHeader (frameHdr);
+
+          NS_LOG_INFO ("Added frame header of size " << frameHdr.GetSerializedSize () <<
+                       " bytes.");
+
+          // Add the Lorawan Mac header to the packet
+          macHdr = LorawanMacHeader ();
+          ApplyNecessaryOptions (macHdr);
+          packet->AddHeader (macHdr);
+          m_retxParams.retxLeft = m_retxParams.retxLeft - 1;           // decreasing the number of retransmissions
+          NS_LOG_DEBUG ("Retransmitting an old packet.");
+
+          // static_cast<ClassAEndDeviceLorawanMac*>(this)->SendToPhy (m_retxParams.packet);
+          SendToPhy (m_retxParams.packet);
+        }
+    }
+
+}
+
+
+void
+EndDeviceLorawanMac::DoSend1 (Ptr<Packet> packet, int fCnt)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_INFO ("EndDeviceLorawanMac::DoSend1 fCnt: " << fCnt);
+
+  // Checking if this is the transmission of a new packet
+  if (packet != m_retxParams.packet)
+    {
+      NS_LOG_DEBUG ("Received a new packet from application. Resetting retransmission parameters.");
+                
+      if (fCnt > 0) {
+        m_currentFCnt = fCnt;
+      } else {
+        m_currentFCnt++;
+      }
+      
       NS_LOG_DEBUG ("APP packet: " << packet << ".");
 
       // Add the Lora Frame Header to the packet

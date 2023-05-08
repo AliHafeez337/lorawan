@@ -84,6 +84,7 @@ public:
    * \param packet The packet to send.
    */
   void Send (Ptr<Packet> packet);
+  void Send1 (Ptr<Packet> packet, int fCnt);
 
   /**
    * This function is implemented to achieve compliance with the NetDevice

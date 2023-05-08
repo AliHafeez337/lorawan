@@ -57,6 +57,7 @@ public:
    * \param packet the packet to send
    */
   virtual void Send (Ptr<Packet> packet);
+  virtual void Send1 (Ptr<Packet> packet, int fCnt) override;
 
   /**
    * Checking if we are performing the transmission of a new packet or a retransmission, and call SendToPhy function.
@@ -64,6 +65,7 @@ public:
    * \param packet the packet to send
    */
   virtual void DoSend (Ptr<Packet> packet);
+  virtual void DoSend1 (Ptr<Packet> packet, int fCnt);
 
   /**
   * Add headers and send a packet with the sending function of the physical layer.
@@ -78,6 +80,7 @@ public:
    * \param nextTxDelay Delay at which the transmission will be performed.
    */
   virtual void postponeTransmission (Time nextTxDelay, Ptr<Packet>);
+  virtual void postponeTransmission1 (Time nextTxDelay, Ptr<Packet>, int fCnt);
 
 
   ///////////////////////

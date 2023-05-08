@@ -103,6 +103,59 @@ GatewayLorawanMac::Send (Ptr<Packet> packet)
   m_sentNewPacket (packet);
 }
 
+void
+GatewayLorawanMac::Send1 (Ptr<Packet> packet, int fCnt) // SAME AS GatewayLorawanMac::Send()
+{
+  NS_LOG_FUNCTION (this << packet);
+  NS_LOG_INFO ("GatewayLorawanMac: fCnt: " << fCnt);
+
+  // Get DataRate to send this packet with
+  LoraTag tag;
+  packet->RemovePacketTag (tag);
+  uint8_t dataRate = tag.GetDataRate ();
+  double frequency = tag.GetFrequency ();
+  NS_LOG_DEBUG ("DR: " << unsigned (dataRate));
+  NS_LOG_DEBUG ("SF: " << unsigned (GetSfFromDataRate (dataRate)));
+  NS_LOG_DEBUG ("BW: " << GetBandwidthFromDataRate (dataRate));
+  NS_LOG_DEBUG ("Freq: " << frequency << " MHz");
+  packet->AddPacketTag (tag);
+
+  // Make sure we can transmit this packet
+  if (m_channelHelper.GetWaitingTime(CreateObject<LogicalLoraChannel> (frequency)) > Time(0))
+    {
+      // We cannot send now!
+      NS_LOG_WARN ("Trying to send a packet but Duty Cycle won't allow it. Aborting.");
+      return;
+    }
+
+  LoraTxParameters params;
+  params.sf = GetSfFromDataRate (dataRate);
+  params.headerDisabled = false;
+  params.codingRate = 1;
+  params.bandwidthHz = GetBandwidthFromDataRate (dataRate);
+  params.nPreamble = 8;
+  params.crcEnabled = 1;
+  params.lowDataRateOptimizationEnabled = LoraPhy::GetTSym (params) > MilliSeconds (16) ? true : false;
+
+  // Get the duration
+  Time duration = m_phy->GetOnAirTime (packet, params);
+
+  NS_LOG_DEBUG ("Duration: " << duration.GetSeconds ());
+
+  // Find the channel with the desired frequency
+  double sendingPower = m_channelHelper.GetTxPowerForChannel
+      (CreateObject<LogicalLoraChannel> (frequency));
+
+  // Add the event to the channelHelper to keep track of duty cycle
+  m_channelHelper.AddEvent (duration, CreateObject<LogicalLoraChannel>
+                              (frequency));
+
+  // Send the packet to the PHY layer to send it on the channel
+  m_phy->Send (packet, params, frequency, sendingPower);
+
+  m_sentNewPacket (packet);
+}
+
 bool
 GatewayLorawanMac::IsTransmitting (void)
 {

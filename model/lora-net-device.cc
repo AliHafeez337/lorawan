@@ -119,6 +119,18 @@ LoraNetDevice::Send (Ptr<Packet> packet)
 }
 
 void
+LoraNetDevice::Send1 (Ptr<Packet> packet, int fCnt)
+{
+  NS_LOG_FUNCTION (this << packet);
+  NS_LOG_INFO ("LoraNetDevice: fCnt: " << fCnt);
+
+  // Send the packet to the MAC layer, if it exists
+  NS_ASSERT (m_mac != 0);
+  // m_mac->Send (packet);
+  m_mac->Send1 (packet, fCnt);
+}
+
+void
 LoraNetDevice::Receive (Ptr<Packet> packet)
 {
   NS_LOG_FUNCTION (this << packet);
