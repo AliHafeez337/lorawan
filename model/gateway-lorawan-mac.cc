@@ -174,6 +174,14 @@ GatewayLorawanMac::Receive (Ptr<Packet const> packet)
   LorawanMacHeader macHdr;
   packetCopy->PeekHeader (macHdr);
 
+  packetCopy->RemoveHeader(macHdr);
+  
+  macHdr.SetMType(LorawanMacHeader::MType::UNCONFIRMED_DATA_UP); // Set as unconfirmed data up (non-ACK)
+  
+  packetCopy->AddHeader(macHdr);
+
+  std::cout << "GatewayLorawanMac::Receive::MType: " << (int)macHdr.GetMType() << std::endl;
+
   if (macHdr.IsUplink ())
     {
       m_device->GetObject<LoraNetDevice> ()->Receive (packetCopy);
