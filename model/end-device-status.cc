@@ -396,7 +396,15 @@ EndDeviceStatus::GetPowerGatewayMap (void)
 
   for (auto it = gwList.begin (); it != gwList.end (); it++)
     {
+      // Ptr<MobilityModel> mobilityModel = it->GetObject<MobilityModel>();
+      // if (mobilityModel) {
+      //     // Use the mobility model to get the position of the target device
+      //     Vector position = mobilityModel->GetPosition();
+      //     // std::cout << "Device with MAC address " << targetMacAddress << " is at position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+      //   NS_LOG_INFO ("GW address from list: " << targetMacAddress);
+      // }
       Address currentGwAddress = (*it).first;
+        NS_LOG_INFO ("GW address from list: " << currentGwAddress);
       double currentRxPower = (*it).second.rxPower;
       gatewayPowers.insert (std::pair<double, Address> (currentRxPower, currentGwAddress));
     }

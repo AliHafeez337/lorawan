@@ -99,6 +99,10 @@ public:
 
   Ptr<NetworkStatus> GetNetworkStatus (void);
 
+// private:
+  int gwIter = 0;
+  Ptr<Node> gateways[10];
+
 protected:
   Ptr<NetworkStatus> m_status;
   Ptr<NetworkController> m_controller;

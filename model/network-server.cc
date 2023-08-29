@@ -85,6 +85,22 @@ NetworkServer::AddGateway (Ptr<Node> gateway, Ptr<NetDevice> netDevice)
 
   // Get the PointToPointNetDevice
   Ptr<PointToPointNetDevice> p2pNetDevice;
+  NS_LOG_INFO("gwIter: " << gwIter);
+  gateways[gwIter] = gateway;
+  // gateways.push_back(gateway);
+
+  // // Get the mobility model associated with the device
+  // Ptr<MobilityModel> mobilityModel = gateway->GetObject<MobilityModel>();
+
+  // // Check if the mobility model is not null before using it
+  // if (mobilityModel) {
+  //   // Use the mobility model (e.g., get position, velocity, etc.)
+  //   Vector position = mobilityModel->GetPosition();
+  //   std::cout << "Device Position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+  // }
+  
+  gwIter += 1;
+  
   for (uint32_t i = 0; i < gateway->GetNDevices (); i++)
     {
       p2pNetDevice = gateway->GetDevice (i)->GetObject<PointToPointNetDevice> ();
@@ -99,9 +115,13 @@ NetworkServer::AddGateway (Ptr<Node> gateway, Ptr<NetDevice> netDevice)
   Ptr<GatewayLorawanMac> gwMac = gateway->GetDevice (0)->GetObject<LoraNetDevice> ()->
     GetMac ()->GetObject<GatewayLorawanMac> ();
   NS_ASSERT (gwMac != 0);
+  NS_LOG_INFO("AddGateway: GatewayLorawanMac:  " << gwMac);
 
   // Get the Address
   Address gatewayAddress = p2pNetDevice->GetAddress ();
+
+  // Address gatewayAddress = Mac48Address("11:00:01:02:03:02");
+  // p2pNetDevice->SetAddress (gatewayAddress);
 
   // Create new gatewayStatus
   Ptr<GatewayStatus> gwStatus = Create<GatewayStatus> (gatewayAddress,
@@ -161,8 +181,28 @@ NetworkServer::Receive (Ptr<NetDevice> device, Ptr<const Packet> packet,
   // Fire the trace source
   m_receivedPacket (packet);
 
+  // for (int i = 0; i < 10; i++)
+  // {
+  //   // NS_LOG_INFO ("Receive: iteration: " << i);
+  //   // NS_LOG_INFO ("Receive: length: " << sizeof(locations)/sizeof(locations[0]));
+  //   // NS_LOG_INFO ("Receive: locations00: " << locations[0][0]);
+  //   // NS_LOG_INFO ("Receive: locations01: " << locations[0][1]);
+  //   // NS_LOG_INFO ("Receive: locations02: " << locations[0][2]);
+  //   // NS_LOG_INFO ("Receive: length: " << sizeof(gateways)/sizeof(gateways[0]));
+  //   // Get the mobility model associated with the device
+  //   Ptr<MobilityModel> mobilityModel = gateways[i]->GetObject<MobilityModel>();
+
+  //   // Check if the mobility model is not null before using it
+  //   if (mobilityModel) {
+  //       // Use the mobility model (e.g., get position, velocity, etc.)
+  //       Vector position = mobilityModel->GetPosition();
+  //       std::cout << "Receive: Device Position: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+  //   }
+  // }
+
   // Inform the scheduler of the newly arrived packet
-  m_scheduler->OnReceivedPacket (packet);
+  // m_scheduler->OnReceivedPacket (packet);
+  m_scheduler->OnReceivedPacket2 (packet, gateways);
 
   // Inform the status of the newly arrived packet
   m_status->OnReceivedPacket (packet, address);

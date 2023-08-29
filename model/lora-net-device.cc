@@ -130,6 +130,16 @@ LoraNetDevice::Send1 (Ptr<Packet> packet, int fCnt)
   m_mac->Send1 (packet, fCnt);
 }
 
+// void
+// LoraNetDevice::Send2 (Ptr<Packet> packet)
+// {
+//   NS_LOG_FUNCTION (this << packet);
+
+//   // Send the packet to the MAC layer, if it exists
+//   NS_ASSERT (m_mac != 0);
+//   m_mac->Send (packet);
+// }
+
 void
 LoraNetDevice::Receive (Ptr<Packet> packet)
 {
@@ -284,6 +294,21 @@ LoraNetDevice::Send (Ptr<Packet> packet, const Address& dest,
 
   return true;
 }
+
+// bool
+// LoraNetDevice::Send2 (Ptr<Packet> packet, const Address& dest,
+//                      uint16_t protocolNumber)
+
+// {
+//   NS_LOG_FUNCTION (this << packet << dest << protocolNumber);
+//   NS_LOG_INFO ("2222 ali ali ali bool LoraNetDevice::Send ");
+//   std::cout << "2222 ali ali ali bool LoraNetDevice::Send ";
+
+//   // Fallback to the vanilla Send method
+//   Send (packet);
+
+//   return true;
+// }
 
 bool
 LoraNetDevice::SendFrom (Ptr<Packet> packet, const Address& source,

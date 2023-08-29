@@ -52,12 +52,14 @@ public:
    * events 1 and 2 seconds later.
    */
   void OnReceivedPacket (Ptr<const Packet> packet);
+  void OnReceivedPacket2 (Ptr<const Packet> packet, Ptr<Node> gateways [11]);
 
   /**
    * Method that is scheduled after packet arrivals in order to act on
    * receive windows 1 and 2 seconds later receptions.
    */
   void OnReceiveWindowOpportunity (LoraDeviceAddress deviceAddress, int window);
+  void OnReceiveWindowOpportunity2 (LoraDeviceAddress deviceAddress, int window, Ptr<Node> gateways [11]);
 
 private:
   TracedCallback<Ptr<const Packet> > m_receiveWindowOpened;

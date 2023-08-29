@@ -85,12 +85,14 @@ public:
    */
   void Send (Ptr<Packet> packet);
   void Send1 (Ptr<Packet> packet, int fCnt);
+  // void Send2 (Ptr<Packet> packet);
 
   /**
    * This function is implemented to achieve compliance with the NetDevice
    * interface. Note that the dest and protocolNumber args are ignored.
    */
   bool Send (Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
+  // bool Send2 (Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
 
   /**
    * Callback the Mac layer calls whenever a packet arrives and needs to be

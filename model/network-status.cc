@@ -126,6 +126,8 @@ NetworkStatus::NeedsReply (LoraDeviceAddress deviceAddress)
 Address
 NetworkStatus::GetBestGatewayForDevice (LoraDeviceAddress deviceAddress, int window)
 {
+  NS_LOG_FUNCTION (deviceAddress);
+
   // Get the endDeviceStatus we are interested in
   Ptr<EndDeviceStatus> edStatus = m_endDeviceStatuses.at (deviceAddress);
   double replyFrequency;
@@ -151,14 +153,85 @@ NetworkStatus::GetBestGatewayForDevice (LoraDeviceAddress deviceAddress, int win
   // By iterating on the map in reverse, we go from the 'best'
   // gateway, i.e. the one with the highest received power, to the
   // worst.
-  Address bestGwAddress;
   for (auto it = gwAddresses.rbegin(); it != gwAddresses.rend(); it++)
     {
+      NS_LOG_INFO ("iter --- : " << it->second);
       bool isAvailable = m_gatewayStatuses.find(it->second)->second->IsAvailableForTransmission (replyFrequency);
+      NS_LOG_INFO ("is available --- " << isAvailable);
+    }
+
+  Address bestGwAddress;
+  NS_LOG_INFO ("fINDING best gateway: ");
+  // std::cout << "fINDING best gateway: ";
+  for (auto it = gwAddresses.rbegin(); it != gwAddresses.rend(); it++)
+    {
+      NS_LOG_INFO ("iter : " << it->second);
+      bool isAvailable = m_gatewayStatuses.find(it->second)->second->IsAvailableForTransmission (replyFrequency);
+      NS_LOG_INFO ("is available " << isAvailable);
       if (isAvailable)
         {
           bestGwAddress = it->second;
           break;
+        }
+    }
+
+  return bestGwAddress;
+}
+
+
+Address*
+NetworkStatus::GetBestGatewayForDevice2 (LoraDeviceAddress deviceAddress, int window)
+{
+  NS_LOG_FUNCTION (deviceAddress);
+
+  // Get the endDeviceStatus we are interested in
+  Ptr<EndDeviceStatus> edStatus = m_endDeviceStatuses.at (deviceAddress);
+  double replyFrequency;
+  if (window == 1)
+    {
+      replyFrequency = edStatus->GetFirstReceiveWindowFrequency();
+    }
+  else if (window == 2)
+    {
+      replyFrequency = edStatus->GetSecondReceiveWindowFrequency();
+    }
+  else
+    {
+      NS_ABORT_MSG ("Invalid window value");
+    }
+
+  // Get the list of gateways that this device can reach
+  // NOTE: At this point, we could also take into account the whole network to
+  // identify the best gateway according to various metrics. For now, we just
+  // ask the EndDeviceStatus to pick the best gateway for us via its method.
+  std::map<double, Address> gwAddresses = edStatus->GetPowerGatewayMap ();
+
+  // By iterating on the map in reverse, we go from the 'best'
+  // gateway, i.e. the one with the highest received power, to the
+  // worst.
+  // for (auto it = gwAddresses.rbegin(); it != gwAddresses.rend(); it++)
+  //   {
+  //     NS_LOG_INFO ("iter --- : " << it->second);
+  //     bool isAvailable = m_gatewayStatuses.find(it->second)->second->IsAvailableForTransmission (replyFrequency);
+  //     NS_LOG_INFO ("is available --- " << isAvailable);
+  //   }
+
+  Address* bestGwAddress = new Address[3];
+  int counter = 0;
+  NS_LOG_INFO ("fINDING best gateway: ");
+  // std::cout << "fINDING best gateway: ";
+  for (auto it = gwAddresses.rbegin(); it != gwAddresses.rend(); it++)
+    {
+      NS_LOG_INFO ("iter : " << it->second);
+      bool isAvailable = m_gatewayStatuses.find(it->second)->second->IsAvailableForTransmission (replyFrequency);
+      NS_LOG_INFO ("is available " << isAvailable);
+      if (isAvailable)
+        {
+          bestGwAddress[counter] = it->second;
+          counter ++;
+          if (counter == 3) {
+            break;
+          }
         }
     }
 
@@ -173,6 +246,17 @@ NetworkStatus::SendThroughGateway (Ptr<Packet> packet, Address gwAddress)
   m_gatewayStatuses.find (gwAddress)->second->GetNetDevice ()->Send (packet,
                                                                       gwAddress,
                                                                       0x0800);
+}
+
+void
+NetworkStatus::SendThroughGateway2 (Ptr<Packet> packet, Address gwAddress)
+{
+  NS_LOG_FUNCTION (packet << gwAddress);
+
+  m_gatewayStatuses.find (gwAddress)->second->GetNetDevice ()->Send (packet,
+                                                                      gwAddress,
+                                                                      0x0800);
+  // m_gatewayStatuses.find (gwAddress)->second->GetNetDevice ()->Send2 (packet);
 }
 
 Ptr<Packet>

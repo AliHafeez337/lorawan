@@ -322,7 +322,7 @@ EndDeviceLorawanMac::DoSend (Ptr<Packet> packet)
                        " bytes.");
 
           // Sent a new packet
-          NS_LOG_DEBUG ("Copied packet: " << m_retxParams.packet);
+          NS_LOG_DEBUG ("Copied packet: " << m_retxParams.packet << " of packet: " << packet);
           m_sentNewPacket (m_retxParams.packet);
 
           // static_cast<ClassAEndDeviceLorawanMac*>(this)->SendToPhy (m_retxParams.packet);

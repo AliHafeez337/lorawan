@@ -84,6 +84,7 @@ public:
    * \param deviceAddress the address of the device we are interested in.
    */
   Address GetBestGatewayForDevice (LoraDeviceAddress deviceAddress, int window);
+  Address* GetBestGatewayForDevice2 (LoraDeviceAddress deviceAddress, int window);
 
   /**
    * Send a packet through a Gateway.
@@ -93,6 +94,7 @@ public:
    * transmission.
    */
   void SendThroughGateway (Ptr<Packet> packet, Address gwAddress);
+  void SendThroughGateway2 (Ptr<Packet> packet, Address gwAddress);
 
   /**
    * Get the reply for the specified device address.
